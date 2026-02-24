@@ -1,16 +1,5 @@
 import prisma from '../config/prisma.js';
-import nodemailer from 'nodemailer';
-
-// Configurar transporter de email
-const transporter = nodemailer.createTransporter({
-  host: process.env.SMTP_HOST,
-  port: process.env.SMTP_PORT,
-  secure: process.env.SMTP_SECURE === 'true',
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS
-  }
-});
+import { sendEmail } from '../utils/emailService.js';
 
 // @desc    Create contact message
 // @route   POST /api/contacts
@@ -62,8 +51,7 @@ export const createContact = async (req, res) => {
 
     // Enviar email de notificação para o admin
     try {
-      await transporter.sendMail({
-        from: process.env.EMAIL_FROM,
+      await sendEmail({
         to: process.env.SMTP_USER, // Email do admin
         subject: `Nova Mensagem de Contato: ${subject}`,
         html: `
@@ -91,8 +79,7 @@ export const createContact = async (req, res) => {
 
     // Enviar email de confirmação para o cliente
     try {
-      await transporter.sendMail({
-        from: process.env.EMAIL_FROM,
+      await sendEmail({
         to: email,
         subject: 'Recebemos sua mensagem - TechStore',
         html: `
