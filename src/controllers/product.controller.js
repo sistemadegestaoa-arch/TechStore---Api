@@ -149,6 +149,10 @@ export const getProductById = async (req, res) => {
 // @access  Private/Vendor
 export const createProduct = async (req, res) => {
   try {
+    console.log('📦 Criando produto...');
+    console.log('📝 Body:', req.body);
+    console.log('📸 Files:', req.files);
+
     const {
       name,
       description,
@@ -164,6 +168,14 @@ export const createProduct = async (req, res) => {
       weight,
       dimensions
     } = req.body;
+
+    // Validação básica
+    if (!name || !description || !price || !sku || !stock || !categoryId) {
+      return res.status(400).json({ 
+        message: 'Campos obrigatórios faltando',
+        required: ['name', 'description', 'price', 'sku', 'stock', 'categoryId']
+      });
+    }
 
     // Check if SKU already exists
     const existingSku = await prisma.product.findUnique({
@@ -183,10 +195,23 @@ export const createProduct = async (req, res) => {
     // Handle image uploads
     let images = [];
     if (req.files && req.files.length > 0) {
+      console.log(`📤 Fazendo upload de ${req.files.length} imagens para Cloudinary...`);
+      
       for (const file of req.files) {
-        const result = await uploadToCloudinary(file.path, 'products');
-        images.push(result.secure_url);
+        try {
+          console.log(`📤 Uploading: ${file.filename}`);
+          const result = await uploadToCloudinary(file.path, 'products');
+          console.log(`✅ Upload bem-sucedido: ${result.secure_url}`);
+          images.push(result.secure_url);
+        } catch (uploadError) {
+          console.error(`❌ Erro ao fazer upload da imagem ${file.filename}:`, uploadError);
+          // Continua com as outras imagens mesmo se uma falhar
+        }
       }
+      
+      console.log(`✅ Total de ${images.length} imagens carregadas com sucesso`);
+    } else {
+      console.log('⚠️ Nenhuma imagem foi enviada');
     }
 
     // Create product
@@ -222,6 +247,8 @@ export const createProduct = async (req, res) => {
       }
     });
 
+    console.log('✅ Produto criado com sucesso:', product.id);
+
     // Notificar inscritos da newsletter sobre novo produto (apenas se ACTIVE)
     if (product.status === 'ACTIVE') {
       console.log('🔔 Produto ACTIVE criado, iniciando notificação...');
@@ -233,12 +260,17 @@ export const createProduct = async (req, res) => {
     }
 
     res.status(201).json({
+      success: true,
       message: 'Produto criado com sucesso',
       product
     });
   } catch (error) {
-    console.error('Create product error:', error);
-    res.status(500).json({ message: 'Erro ao criar produto' });
+    console.error('❌ Erro ao criar produto:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Erro ao criar produto',
+      error: error.message 
+    });
   }
 };
 
