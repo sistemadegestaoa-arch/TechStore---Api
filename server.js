@@ -27,6 +27,8 @@ import adminRoutes from './src/routes/admin.routes.js';
 import favoriteRoutes from './src/routes/favorite.routes.js';
 import newsletterRoutes from './src/routes/newsletter.routes.js';
 import teamRoutes from './src/routes/team.routes.js';
+import statsRoutes from './src/routes/stats.routes.js';
+import contactRoutes from './src/routes/contact.routes.js';
 
 // Import error handler
 import errorHandler from './src/middleware/errorHandler.js';
@@ -57,6 +59,8 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/favorites', favoriteRoutes);
 app.use('/api/newsletter', newsletterRoutes);
 app.use('/api/team', teamRoutes);
+app.use('/api/stats', statsRoutes);
+app.use('/api/contacts', contactRoutes);
 
 // Health check
 app.get('/', (req, res) => {
