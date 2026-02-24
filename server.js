@@ -59,8 +59,8 @@ app.use('/api/newsletter', newsletterRoutes);
 app.use('/api/team', teamRoutes);
 
 // Health check
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', message: 'TechStore API is running' });
+app.get('/', (req, res) => {
+  res.json({ status: 'OK', message: 'TechStore API is Online' });
 });
 
 // Error handler (must be last)
