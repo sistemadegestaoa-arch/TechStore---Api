@@ -29,6 +29,12 @@ import newsletterRoutes from './src/routes/newsletter.routes.js';
 import teamRoutes from './src/routes/team.routes.js';
 import statsRoutes from './src/routes/stats.routes.js';
 import contactRoutes from './src/routes/contact.routes.js';
+import couponRoutes from './src/routes/coupon.routes.js';
+import notificationRoutes from './src/routes/notification.routes.js';
+import verificationRoutes from './src/routes/verification.routes.js';
+import searchRoutes from './src/routes/search.routes.js';
+import analyticsRoutes from './src/routes/analytics.routes.js';
+import chatRoutes from './src/routes/chat.routes.js';
 
 // Import error handler
 import errorHandler from './src/middleware/errorHandler.js';
@@ -61,6 +67,12 @@ app.use('/api/newsletter', newsletterRoutes);
 app.use('/api/team', teamRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/contacts', contactRoutes);
+app.use('/api/coupons', couponRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/verifications', verificationRoutes);
+app.use('/api/search', searchRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/chat', chatRoutes);
 
 // Health check
 app.get('/', (req, res) => {
