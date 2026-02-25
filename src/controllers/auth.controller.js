@@ -2,6 +2,7 @@ import prisma from '../config/prisma.js';
 import bcrypt from 'bcryptjs';
 import generateToken from '../utils/generateToken.js';
 import { sendVerificationEmail, sendPasswordResetEmail } from '../utils/emailService.js';
+import { notifyWelcome } from '../utils/notificationHelper.js';
 
 // @desc    Register customer
 // @route   POST /api/auth/register
@@ -52,6 +53,13 @@ export const register = async (req, res, next) => {
 
     // Generate token
     const token = generateToken(user.id);
+
+    // Enviar notificação de boas-vindas
+    try {
+      await notifyWelcome(user.id, user.name);
+    } catch (notifError) {
+      console.error('❌ Erro ao enviar notificação de boas-vindas:', notifError);
+    }
 
     res.status(201).json({
       success: true,
@@ -121,6 +129,13 @@ export const registerVendor = async (req, res, next) => {
 
     // Generate token
     const token = generateToken(vendor.id);
+
+    // Enviar notificação de boas-vindas
+    try {
+      await notifyWelcome(vendor.id, vendor.name);
+    } catch (notifError) {
+      console.error('❌ Erro ao enviar notificação de boas-vindas:', notifError);
+    }
 
     res.status(201).json({
       success: true,

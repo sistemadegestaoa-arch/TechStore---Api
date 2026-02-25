@@ -1,6 +1,7 @@
 import prisma from '../config/prisma.js';
 import { notifyNewProduct } from './newsletter.controller.js';
 import { uploadToCloudinary, deleteFromCloudinary } from '../config/cloudinary.js';
+import { notifyLowStock, notifyAllCustomersNewProduct } from '../utils/notificationHelper.js';
 
 // @desc    Get all products (with filters)
 // @route   GET /api/products
@@ -255,6 +256,14 @@ export const createProduct = async (req, res) => {
       notifyNewProduct(product).catch(err => 
         console.error('❌ Erro ao notificar novo produto:', err)
       );
+
+      // Notificar TODOS os clientes sobre novo produto
+      try {
+        console.log('🔔 Notificando todos os clientes sobre novo produto...');
+        await notifyAllCustomersNewProduct(product);
+      } catch (notifError) {
+        console.error('❌ Erro ao notificar clientes:', notifError);
+      }
     } else {
       console.log('⚠️ Produto criado com status', product.status, '- notificação não enviada');
     }
@@ -350,6 +359,13 @@ export const updateProduct = async (req, res) => {
         category: true
       }
     });
+
+    // Verificar estoque baixo e notificar
+    try {
+      await notifyLowStock(product);
+    } catch (notifError) {
+      console.error('❌ Erro ao verificar estoque baixo:', notifError);
+    }
 
     res.json({
       message: 'Produto atualizado com sucesso',

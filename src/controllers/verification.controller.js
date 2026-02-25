@@ -1,5 +1,6 @@
 import prisma from '../config/prisma.js';
 import { sendEmail } from '../utils/emailService.js';
+import { notifyVerificationApproved, notifyVerificationRejected } from '../utils/notificationHelper.js';
 
 // @desc    Submit vendor verification
 // @route   POST /api/verifications
@@ -237,6 +238,13 @@ export const approveVerification = async (req, res) => {
       console.error('Erro ao enviar email:', emailError);
     }
 
+    // Enviar notificação in-app
+    try {
+      await notifyVerificationApproved(verification.vendorId);
+    } catch (notifError) {
+      console.error('❌ Erro ao enviar notificação:', notifError);
+    }
+
     res.json({
       success: true,
       message: 'Verificação aprovada com sucesso',
@@ -302,6 +310,13 @@ export const rejectVerification = async (req, res) => {
       });
     } catch (emailError) {
       console.error('Erro ao enviar email:', emailError);
+    }
+
+    // Enviar notificação in-app
+    try {
+      await notifyVerificationRejected(verification.vendorId, reason);
+    } catch (notifError) {
+      console.error('❌ Erro ao enviar notificação:', notifError);
     }
 
     res.json({

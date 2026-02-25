@@ -1,4 +1,5 @@
 import prisma from '../config/prisma.js';
+import { notifyNewOrder, notifyVendorNewOrder, notifyOrderStatusChange } from '../utils/notificationHelper.js';
 
 // @desc    Create order
 // @route   POST /api/orders
@@ -114,6 +115,31 @@ export const createOrder = async (req, res) => {
           totalSales: { increment: item.quantity }
         }
       });
+    }
+
+    // Enviar notificações
+    try {
+      // Notificar cliente sobre novo pedido
+      await notifyNewOrder(order);
+
+      // Buscar informações do cliente para notificar vendedores
+      const customer = await prisma.user.findUnique({
+        where: { id: req.user.id },
+        select: { name: true }
+      });
+
+      // Notificar cada vendedor sobre suas vendas com nome do cliente
+      for (const item of order.items) {
+        await notifyVendorNewOrder(
+          item.vendorId,
+          order.orderNumber,
+          item.productName,
+          item.quantity,
+          customer.name // Nome do cliente
+        );
+      }
+    } catch (notifError) {
+      console.error('❌ Erro ao enviar notificações:', notifError);
     }
 
     res.status(201).json({
@@ -386,6 +412,13 @@ export const updateOrderStatus = async (req, res) => {
         }
       }
     });
+
+    // Notificar cliente sobre mudança de status
+    try {
+      await notifyOrderStatusChange(updatedOrder, order.status, status);
+    } catch (notifError) {
+      console.error('❌ Erro ao enviar notificação:', notifError);
+    }
 
     res.json({
       message: 'Status do pedido atualizado',

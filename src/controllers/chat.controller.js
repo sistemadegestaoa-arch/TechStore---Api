@@ -1,4 +1,5 @@
 import prisma from '../config/prisma.js';
+import { notifyNewMessage } from '../utils/notificationHelper.js';
 
 // Note: This is a simple chat system. For production, consider using Socket.io for real-time
 // or integrate with WhatsApp Business API
@@ -73,6 +74,13 @@ export const sendMessage = async (req, res) => {
         lastMessage: message
       }
     });
+
+    // Notificar destinatário sobre nova mensagem
+    try {
+      await notifyNewMessage(receiverId, req.user.name, message);
+    } catch (notifError) {
+      console.error('❌ Erro ao enviar notificação:', notifError);
+    }
 
     res.status(201).json({
       success: true,
