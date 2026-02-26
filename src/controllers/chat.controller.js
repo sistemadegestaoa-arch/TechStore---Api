@@ -119,6 +119,8 @@ export const getConversations = async (req, res) => {
   try {
     const userId = req.user.id;
 
+    console.log('📋 Carregando conversas para:', req.user.name, '(', userId, ')');
+
     const conversations = await prisma.conversation.findMany({
       where: {
         OR: [
@@ -154,39 +156,36 @@ export const getConversations = async (req, res) => {
             images: true,
             price: true
           }
-        },
-        messages: {
-          take: 1,
-          orderBy: { createdAt: 'desc' },
-          select: {
-            message: true,
-            createdAt: true,
-            isRead: true,
-            senderId: true
-          }
         }
       },
       orderBy: { lastMessageAt: 'desc' }
     });
 
     // Format conversations
-    const formattedConversations = conversations.map(conv => {
+    const formattedConversations = await Promise.all(conversations.map(async (conv) => {
       const otherUser = conv.user1Id === userId ? conv.user2 : conv.user1;
-      const lastMessage = conv.messages[0];
-      const unreadCount = conv.messages.filter(m => 
-        m.receiverId === userId && !m.isRead
-      ).length;
+      
+      // Get unread count for this conversation
+      const unreadCount = await prisma.message.count({
+        where: {
+          conversationId: conv.id,
+          receiverId: userId,
+          isRead: false
+        }
+      });
 
       return {
         id: conv.id,
         otherUser,
         product: conv.product,
-        lastMessage: lastMessage?.message,
+        lastMessage: conv.lastMessage,
         lastMessageAt: conv.lastMessageAt,
         unreadCount,
-        isLastMessageFromMe: lastMessage?.senderId === userId
+        isLastMessageFromMe: conv.lastMessage ? false : false // Será atualizado quando tiver mensagens
       };
-    });
+    }));
+
+    console.log('✅ Retornando', formattedConversations.length, 'conversas para', req.user.name);
 
     res.json({
       success: true,
@@ -210,6 +209,8 @@ export const getConversationMessages = async (req, res) => {
     const userId = req.user.id;
     const { page = 1, limit = 50 } = req.query;
 
+    console.log('🔍 Buscando mensagens:', { conversationId: id, userId, userName: req.user.name });
+
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const take = parseInt(limit);
 
@@ -225,11 +226,14 @@ export const getConversationMessages = async (req, res) => {
     });
 
     if (!conversation) {
+      console.error('❌ ACESSO NEGADO: Usuário', req.user.name, 'tentou acessar conversa', id);
       return res.status(404).json({
         success: false,
         message: 'Conversa não encontrada'
       });
     }
+
+    console.log('✅ Acesso autorizado à conversa:', id);
 
     // Get messages
     const messages = await prisma.message.findMany({
