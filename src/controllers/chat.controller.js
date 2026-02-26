@@ -21,6 +21,15 @@ export const sendMessage = async (req, res) => {
       });
     }
 
+    // Validação: não pode enviar mensagem para si mesmo
+    if (senderId === receiverId) {
+      console.error('❌ Tentativa de enviar mensagem para si mesmo:', req.user.name);
+      return res.status(400).json({
+        success: false,
+        message: 'Você não pode enviar mensagem para si mesmo'
+      });
+    }
+
     // Validate receiver exists
     const receiver = await prisma.user.findUnique({
       where: { id: receiverId }
@@ -164,6 +173,14 @@ export const getConversations = async (req, res) => {
     // Format conversations
     const formattedConversations = await Promise.all(conversations.map(async (conv) => {
       const otherUser = conv.user1Id === userId ? conv.user2 : conv.user1;
+      
+      console.log('💬 Conversa:', {
+        id: conv.id,
+        user1: conv.user1.name,
+        user2: conv.user2.name,
+        currentUser: req.user.name,
+        otherUser: otherUser.name
+      });
       
       // Get unread count for this conversation
       const unreadCount = await prisma.message.count({
@@ -457,6 +474,8 @@ export const getAllUsers = async (req, res) => {
   try {
     const currentUserId = req.user.id;
     const { search, role } = req.query;
+
+    console.log('👥 Buscando usuários para:', req.user.name, '- Excluindo ID:', currentUserId);
 
     // Build where clause
     const where = {
