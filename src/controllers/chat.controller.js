@@ -12,12 +12,29 @@ export const sendMessage = async (req, res) => {
     const senderId = req.user.id;
     const { receiverId, message, productId } = req.body;
 
+    console.log('📨 Enviando mensagem:', { senderId, receiverId, message: message?.substring(0, 50), productId });
+
     if (!receiverId || !message) {
       return res.status(400).json({
         success: false,
         message: 'Destinatário e mensagem são obrigatórios'
       });
     }
+
+    // Validate receiver exists
+    const receiver = await prisma.user.findUnique({
+      where: { id: receiverId }
+    });
+
+    if (!receiver) {
+      console.error('❌ Destinatário não encontrado:', receiverId);
+      return res.status(404).json({
+        success: false,
+        message: 'Destinatário não encontrado'
+      });
+    }
+
+    console.log('✅ Destinatário encontrado:', receiver.name);
 
     // Create conversation if doesn't exist
     let conversation = await prisma.conversation.findFirst({
@@ -115,7 +132,9 @@ export const getConversations = async (req, res) => {
             id: true,
             name: true,
             avatar: true,
-            storeName: true
+            storeName: true,
+            role: true,
+            phone: true
           }
         },
         user2: {
@@ -123,7 +142,9 @@ export const getConversations = async (req, res) => {
             id: true,
             name: true,
             avatar: true,
-            storeName: true
+            storeName: true,
+            role: true,
+            phone: true
           }
         },
         product: {
