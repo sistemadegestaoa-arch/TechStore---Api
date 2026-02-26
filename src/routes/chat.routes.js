@@ -7,7 +7,8 @@ import {
   markAsRead,
   getUnreadCount,
   deleteConversation,
-  getWhatsAppLink
+  getWhatsAppLink,
+  getAllUsers
 } from '../controllers/chat.controller.js';
 
 const router = express.Router();
@@ -22,5 +23,6 @@ router.get('/conversations/:id/messages', protect, getConversationMessages);
 router.patch('/conversations/:id/read', protect, markAsRead);
 router.delete('/conversations/:id', protect, deleteConversation);
 router.get('/unread-count', protect, getUnreadCount);
+router.get('/users', protect, getAllUsers);
 
 export default router;

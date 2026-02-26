@@ -445,3 +445,91 @@ export const getWhatsAppLink = async (req, res) => {
     });
   }
 };
+
+// @desc    Get all users available for chat
+// @route   GET /api/chat/users
+// @access  Private
+export const getAllUsers = async (req, res) => {
+  try {
+    const currentUserId = req.user.id;
+    const { search, role } = req.query;
+
+    // Build where clause
+    const where = {
+      id: { not: currentUserId }, // Exclude current user
+      isActive: true
+    };
+
+    // Filter by role if provided
+    if (role && ['CUSTOMER', 'VENDOR', 'ADMIN'].includes(role)) {
+      where.role = role;
+    }
+
+    // Filter by search term
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+        { storeName: { contains: search, mode: 'insensitive' } }
+      ];
+    }
+
+    const users = await prisma.user.findMany({
+      where,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        avatar: true,
+        role: true,
+        storeName: true,
+        phone: true,
+        isActive: true
+      },
+      orderBy: [
+        { role: 'asc' }, // ADMIN, CUSTOMER, VENDOR
+        { name: 'asc' }
+      ],
+      take: 100 // Limit to 100 users
+    });
+
+    // Get existing conversations to mark users with active chats
+    const conversations = await prisma.conversation.findMany({
+      where: {
+        OR: [
+          { user1Id: currentUserId },
+          { user2Id: currentUserId }
+        ]
+      },
+      select: {
+        user1Id: true,
+        user2Id: true
+      }
+    });
+
+    // Create set of user IDs with existing conversations
+    const conversationUserIds = new Set();
+    conversations.forEach(conv => {
+      if (conv.user1Id !== currentUserId) conversationUserIds.add(conv.user1Id);
+      if (conv.user2Id !== currentUserId) conversationUserIds.add(conv.user2Id);
+    });
+
+    // Add hasConversation flag to users
+    const usersWithConversationFlag = users.map(user => ({
+      ...user,
+      hasConversation: conversationUserIds.has(user.id)
+    }));
+
+    res.json({
+      success: true,
+      users: usersWithConversationFlag,
+      total: usersWithConversationFlag.length
+    });
+  } catch (error) {
+    console.error('Get all users error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro ao buscar usuários'
+    });
+  }
+};
