@@ -4,6 +4,7 @@ import {
   getUserNotifications,
   markAsRead,
   markAllAsRead,
+  markConversationNotificationsAsRead,
   deleteNotification,
   createNotification,
   broadcastNotification
@@ -15,6 +16,7 @@ const router = express.Router();
 router.get('/', protect, getUserNotifications);
 router.patch('/:id/read', protect, markAsRead);
 router.patch('/read-all', protect, markAllAsRead);
+router.patch('/conversation/:conversationId/read', protect, markConversationNotificationsAsRead);
 router.delete('/:id', protect, deleteNotification);
 
 // Admin routes

@@ -111,6 +111,45 @@ export const markAllAsRead = async (req, res) => {
   }
 };
 
+// @desc    Mark notifications by conversation as read
+// @route   PATCH /api/notifications/conversation/:conversationId/read
+// @access  Private
+export const markConversationNotificationsAsRead = async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+    const userId = req.user.id;
+
+    console.log(`📖 Marcando notificações da conversa ${conversationId} como lidas para usuário ${userId}`);
+
+    // Marcar como lidas todas as notificações de mensagem desta conversa
+    const result = await prisma.notification.updateMany({
+      where: {
+        userId,
+        isRead: false,
+        type: 'NEW_MESSAGE',
+        link: {
+          contains: conversationId
+        }
+      },
+      data: { isRead: true }
+    });
+
+    console.log(`✅ ${result.count} notificações marcadas como lidas`);
+
+    res.json({
+      success: true,
+      message: `${result.count} notificações marcadas como lidas`,
+      count: result.count
+    });
+  } catch (error) {
+    console.error('Erro ao marcar notificações da conversa:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro ao marcar notificações'
+    });
+  }
+};
+
 // @desc    Delete notification
 // @route   DELETE /api/notifications/:id
 // @access  Private
