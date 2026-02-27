@@ -103,12 +103,19 @@ export const sendMessage = async (req, res) => {
 
     // Emitir evento Socket.IO para tempo real
     const io = req.app.get('io');
+    const connectedUsers = req.app.get('connectedUsers');
+    
     if (io) {
+      console.log('📡 Socket.IO disponível, emitindo eventos...');
+      console.log('👥 Usuários conectados:', Array.from(connectedUsers?.keys() || []));
+      console.log('🎯 Destinatário:', receiverId, 'Socket ID:', connectedUsers?.get(receiverId));
+      
       // Enviar para a sala da conversa
       io.to(`conversation:${conversation.id}`).emit('message:new', {
         conversationId: conversation.id,
         message: newMessage
       });
+      console.log('✅ Evento message:new emitido para sala conversation:', conversation.id);
 
       // Enviar para o destinatário (notificação)
       io.to(`user:${receiverId}`).emit('notification:new', {
@@ -117,8 +124,23 @@ export const sendMessage = async (req, res) => {
         from: req.user.name,
         message: message.substring(0, 50)
       });
-
-      console.log('🔔 Evento Socket.IO emitido para conversa:', conversation.id);
+      console.log('✅ Evento notification:new emitido para user:', receiverId);
+      
+      // Também emitir para o socket ID específico do usuário (fallback)
+      const receiverSocketId = connectedUsers?.get(receiverId);
+      if (receiverSocketId) {
+        io.to(receiverSocketId).emit('notification:new', {
+          type: 'NEW_MESSAGE',
+          conversationId: conversation.id,
+          from: req.user.name,
+          message: message.substring(0, 50)
+        });
+        console.log('✅ Evento notification:new emitido para socket ID:', receiverSocketId);
+      } else {
+        console.warn('⚠️ Destinatário não está conectado via Socket.IO');
+      }
+    } else {
+      console.error('❌ Socket.IO não disponível no req.app');
     }
 
     // Notificar destinatário sobre nova mensagem

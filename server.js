@@ -76,13 +76,16 @@ io.use((socket, next) => {
 
 // Socket.IO connection handler
 io.on('connection', (socket) => {
-  console.log(`✅ User connected: ${socket.userId}`);
+  console.log(`✅ User connected: ${socket.userId} (Socket ID: ${socket.id})`);
   
   // Store user socket
   connectedUsers.set(socket.userId, socket.id);
+  console.log(`📝 Usuário ${socket.userId} mapeado para socket ${socket.id}`);
+  console.log(`👥 Total de usuários conectados: ${connectedUsers.size}`);
 
   // Join user's personal room
   socket.join(`user:${socket.userId}`);
+  console.log(`🚪 Usuário ${socket.userId} entrou na sala: user:${socket.userId}`);
 
   // Handle joining conversation rooms
   socket.on('join:conversation', (conversationId) => {
@@ -100,6 +103,7 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     console.log(`❌ User disconnected: ${socket.userId}`);
     connectedUsers.delete(socket.userId);
+    console.log(`👥 Total de usuários conectados: ${connectedUsers.size}`);
   });
 });
 
