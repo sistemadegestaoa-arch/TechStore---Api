@@ -1,10 +1,13 @@
 import express from 'express';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import jwt from 'jsonwebtoken';
 
 // ES Module equivalents for __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -40,6 +43,69 @@ import chatRoutes from './src/routes/chat.routes.js';
 import errorHandler from './src/middleware/errorHandler.js';
 
 const app = express();
+const httpServer = createServer(app);
+
+// Socket.IO configuration
+const io = new Server(httpServer, {
+  cors: {
+    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    credentials: true,
+    methods: ['GET', 'POST']
+  }
+});
+
+// Store connected users
+const connectedUsers = new Map();
+
+// Socket.IO authentication middleware
+io.use((socket, next) => {
+  const token = socket.handshake.auth.token;
+  
+  if (!token) {
+    return next(new Error('Authentication error'));
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    socket.userId = decoded.userId;
+    next();
+  } catch (error) {
+    next(new Error('Authentication error'));
+  }
+});
+
+// Socket.IO connection handler
+io.on('connection', (socket) => {
+  console.log(`✅ User connected: ${socket.userId}`);
+  
+  // Store user socket
+  connectedUsers.set(socket.userId, socket.id);
+
+  // Join user's personal room
+  socket.join(`user:${socket.userId}`);
+
+  // Handle joining conversation rooms
+  socket.on('join:conversation', (conversationId) => {
+    socket.join(`conversation:${conversationId}`);
+    console.log(`👤 User ${socket.userId} joined conversation ${conversationId}`);
+  });
+
+  // Handle leaving conversation rooms
+  socket.on('leave:conversation', (conversationId) => {
+    socket.leave(`conversation:${conversationId}`);
+    console.log(`👋 User ${socket.userId} left conversation ${conversationId}`);
+  });
+
+  // Handle disconnect
+  socket.on('disconnect', () => {
+    console.log(`❌ User disconnected: ${socket.userId}`);
+    connectedUsers.delete(socket.userId);
+  });
+});
+
+// Make io accessible to routes
+app.set('io', io);
+app.set('connectedUsers', connectedUsers);
 
 // Middleware
 app.use(helmet());
@@ -76,7 +142,11 @@ app.use('/api/chat', chatRoutes);
 
 // Health check
 app.get('/', (req, res) => {
-  res.json({ status: 'OK', message: 'TechStore API is Online' });
+  res.json({ 
+    status: 'OK', 
+    message: 'TechStore API is Online',
+    websocket: 'Socket.IO enabled'
+  });
 });
 
 // Error handler (must be last)
@@ -92,8 +162,9 @@ const startServer = async () => {
     console.log('✅ Database connection established successfully');
 
     // Start server
-    app.listen(PORT, () => {
+    httpServer.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
+      console.log(`🔌 Socket.IO enabled for real-time chat`);
       console.log(`📍 Environment: ${process.env.NODE_ENV}`);
       console.log(`📊 Prisma Studio: npx prisma studio`);
     });

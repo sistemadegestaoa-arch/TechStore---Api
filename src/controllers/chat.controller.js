@@ -101,6 +101,26 @@ export const sendMessage = async (req, res) => {
       }
     });
 
+    // Emitir evento Socket.IO para tempo real
+    const io = req.app.get('io');
+    if (io) {
+      // Enviar para a sala da conversa
+      io.to(`conversation:${conversation.id}`).emit('message:new', {
+        conversationId: conversation.id,
+        message: newMessage
+      });
+
+      // Enviar para o destinatário (notificação)
+      io.to(`user:${receiverId}`).emit('notification:new', {
+        type: 'NEW_MESSAGE',
+        conversationId: conversation.id,
+        from: req.user.name,
+        message: message.substring(0, 50)
+      });
+
+      console.log('🔔 Evento Socket.IO emitido para conversa:', conversation.id);
+    }
+
     // Notificar destinatário sobre nova mensagem
     try {
       await notifyNewMessage(receiverId, req.user.name, message);
