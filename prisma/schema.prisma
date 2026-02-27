@@ -71,6 +71,9 @@ model User {
   
   // Account status
   isActive Boolean @default(true)
+  isApproved Boolean @default(false) // Vendedores precisam ser aprovados
+  approvedAt DateTime?
+  approvedBy String?
   
   // Vendor specific fields
   storeName        String?

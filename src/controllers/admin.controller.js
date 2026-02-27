@@ -1124,3 +1124,253 @@ export const getSalesReport = async (req, res) => {
     res.status(500).json({ message: 'Erro ao gerar relatório' });
   }
 };
+
+
+// ==================== VENDOR APPROVAL MANAGEMENT ====================
+
+// @desc    Get pending vendors
+// @route   GET /api/admin/vendors/pending
+// @access  Private/Admin
+export const getPendingVendors = async (req, res) => {
+  try {
+    const { page = 1, limit = 20 } = req.query;
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const take = parseInt(limit);
+
+    const vendors = await prisma.user.findMany({
+      where: {
+        role: 'VENDOR',
+        isApproved: false,
+        isActive: true
+      },
+      skip,
+      take,
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        storeName: true,
+        storeDescription: true,
+        address: true,
+        city: true,
+        province: true,
+        isEmailVerified: true,
+        createdAt: true,
+        _count: {
+          select: {
+            products: true
+          }
+        }
+      }
+    });
+
+    const total = await prisma.user.count({
+      where: {
+        role: 'VENDOR',
+        isApproved: false,
+        isActive: true
+      }
+    });
+
+    res.json({
+      vendors,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / parseInt(limit))
+      }
+    });
+  } catch (error) {
+    console.error('Get pending vendors error:', error);
+    res.status(500).json({ message: 'Erro ao buscar vendedores pendentes' });
+  }
+};
+
+// @desc    Approve vendor
+// @route   PATCH /api/admin/vendors/:id/approve
+// @access  Private/Admin
+export const approveVendor = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const vendor = await prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        isApproved: true
+      }
+    });
+
+    if (!vendor) {
+      return res.status(404).json({ message: 'Vendedor não encontrado' });
+    }
+
+    if (vendor.role !== 'VENDOR') {
+      return res.status(400).json({ message: 'Usuário não é um vendedor' });
+    }
+
+    if (vendor.isApproved) {
+      return res.status(400).json({ message: 'Vendedor já está aprovado' });
+    }
+
+    const updatedVendor = await prisma.user.update({
+      where: { id },
+      data: {
+        isApproved: true,
+        approvedAt: new Date(),
+        approvedBy: req.user.id
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        storeName: true,
+        isApproved: true,
+        approvedAt: true
+      }
+    });
+
+    // Criar notificação para o vendedor
+    try {
+      await prisma.notification.create({
+        data: {
+          userId: id,
+          type: 'SYSTEM',
+          title: '🎉 Conta Aprovada!',
+          message: `Parabéns ${vendor.name}! Sua conta de vendedor foi aprovada. Agora você pode começar a vender seus produtos.`,
+          link: '/vendedor/produtos'
+        }
+      });
+    } catch (notifError) {
+      console.error('❌ Erro ao criar notificação:', notifError);
+    }
+
+    res.json({
+      message: 'Vendedor aprovado com sucesso',
+      vendor: updatedVendor
+    });
+  } catch (error) {
+    console.error('Approve vendor error:', error);
+    res.status(500).json({ message: 'Erro ao aprovar vendedor' });
+  }
+};
+
+// @desc    Reject vendor
+// @route   PATCH /api/admin/vendors/:id/reject
+// @access  Private/Admin
+export const rejectVendor = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+
+    const vendor = await prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        isApproved: true
+      }
+    });
+
+    if (!vendor) {
+      return res.status(404).json({ message: 'Vendedor não encontrado' });
+    }
+
+    if (vendor.role !== 'VENDOR') {
+      return res.status(400).json({ message: 'Usuário não é um vendedor' });
+    }
+
+    // Desativar a conta
+    const updatedVendor = await prisma.user.update({
+      where: { id },
+      data: {
+        isActive: false,
+        isApproved: false
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        storeName: true,
+        isActive: true,
+        isApproved: true
+      }
+    });
+
+    // Criar notificação para o vendedor
+    try {
+      await prisma.notification.create({
+        data: {
+          userId: id,
+          type: 'SYSTEM',
+          title: '❌ Conta Não Aprovada',
+          message: `Olá ${vendor.name}, infelizmente sua conta de vendedor não foi aprovada. ${reason ? `Motivo: ${reason}` : 'Entre em contato com o suporte para mais informações.'}`,
+          link: '/contato'
+        }
+      });
+    } catch (notifError) {
+      console.error('❌ Erro ao criar notificação:', notifError);
+    }
+
+    res.json({
+      message: 'Vendedor rejeitado',
+      vendor: updatedVendor
+    });
+  } catch (error) {
+    console.error('Reject vendor error:', error);
+    res.status(500).json({ message: 'Erro ao rejeitar vendedor' });
+  }
+};
+
+// @desc    Get vendor approval statistics
+// @route   GET /api/admin/vendors/stats
+// @access  Private/Admin
+export const getVendorApprovalStats = async (req, res) => {
+  try {
+    const totalVendors = await prisma.user.count({
+      where: { role: 'VENDOR' }
+    });
+
+    const approvedVendors = await prisma.user.count({
+      where: {
+        role: 'VENDOR',
+        isApproved: true
+      }
+    });
+
+    const pendingVendors = await prisma.user.count({
+      where: {
+        role: 'VENDOR',
+        isApproved: false,
+        isActive: true
+      }
+    });
+
+    const rejectedVendors = await prisma.user.count({
+      where: {
+        role: 'VENDOR',
+        isApproved: false,
+        isActive: false
+      }
+    });
+
+    res.json({
+      total: totalVendors,
+      approved: approvedVendors,
+      pending: pendingVendors,
+      rejected: rejectedVendors
+    });
+  } catch (error) {
+    console.error('Get vendor stats error:', error);
+    res.status(500).json({ message: 'Erro ao buscar estatísticas' });
+  }
+};

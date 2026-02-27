@@ -44,7 +44,13 @@ import {
   getTeamStats,
   
   // Reports
-  getSalesReport
+  getSalesReport,
+  
+  // Vendor Approval
+  getPendingVendors,
+  approveVendor,
+  rejectVendor,
+  getVendorApprovalStats
 } from '../controllers/admin.controller.js';
 
 const router = express.Router();
@@ -96,5 +102,11 @@ router.delete('/team/:id', deleteTeamMemberAdmin);
 
 // Reports
 router.get('/reports/sales', getSalesReport);
+
+// Vendor Approval Management
+router.get('/vendors/pending', getPendingVendors);
+router.get('/vendors/stats', getVendorApprovalStats);
+router.patch('/vendors/:id/approve', approveVendor);
+router.patch('/vendors/:id/reject', rejectVendor);
 
 export default router;

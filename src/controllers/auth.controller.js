@@ -139,7 +139,7 @@ export const registerVendor = async (req, res, next) => {
 
     res.status(201).json({
       success: true,
-      message: 'Cadastro de vendedor realizado com sucesso. Verifique seu email.',
+      message: 'Cadastro de vendedor realizado com sucesso. Sua conta será analisada e você receberá uma notificação quando for aprovada.',
       data: {
         user: vendor,
         token
@@ -180,6 +180,14 @@ export const login = async (req, res, next) => {
       return res.status(401).json({
         success: false,
         message: 'Conta desativada. Entre em contato com o suporte.'
+      });
+    }
+
+    // Check if vendor is approved
+    if (user.role === 'VENDOR' && !user.isApproved) {
+      return res.status(403).json({
+        success: false,
+        message: 'Sua conta de vendedor está aguardando aprovação. Você receberá uma notificação quando for aprovada.'
       });
     }
 
