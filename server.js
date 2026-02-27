@@ -62,14 +62,18 @@ io.use((socket, next) => {
   const token = socket.handshake.auth.token;
   
   if (!token) {
+    console.error('❌ Socket.IO: Token não fornecido');
     return next(new Error('Authentication error'));
   }
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    socket.userId = decoded.userId;
+    console.log('🔓 Token decodificado:', decoded);
+    socket.userId = decoded.id; // ← CORRIGIDO: usar 'id' ao invés de 'userId'
+    console.log('✅ Socket.IO autenticado para usuário:', socket.userId);
     next();
   } catch (error) {
+    console.error('❌ Erro ao verificar token Socket.IO:', error.message);
     next(new Error('Authentication error'));
   }
 });
