@@ -154,6 +154,30 @@ export const createProduct = async (req, res) => {
     console.log('📝 Body:', req.body);
     console.log('📸 Files:', req.files);
 
+    // Verificar se o vendedor enviou documentos de verificação
+    const verification = await prisma.vendorVerification.findUnique({
+      where: { vendorId: req.user.id }
+    });
+
+    if (!verification) {
+      return res.status(403).json({ 
+        success: false,
+        message: 'Você precisa enviar seus documentos de verificação antes de cadastrar produtos',
+        requiresVerification: true,
+        verificationUrl: '/vendor-verification'
+      });
+    }
+
+    if (verification.status === 'REJECTED') {
+      return res.status(403).json({ 
+        success: false,
+        message: 'Sua verificação foi rejeitada. Por favor, envie novos documentos antes de cadastrar produtos',
+        requiresVerification: true,
+        verificationUrl: '/vendor-verification',
+        rejectionReason: verification.rejectionReason
+      });
+    }
+
     const {
       name,
       description,
