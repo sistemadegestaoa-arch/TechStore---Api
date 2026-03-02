@@ -487,6 +487,44 @@ export const getVendorStats = async (req, res) => {
       }
     });
 
+    // Get total views from all vendor products
+    const productsWithViews = await prisma.product.findMany({
+      where: { vendorId: req.user.id },
+      select: { views: true }
+    });
+
+    const totalViews = productsWithViews.reduce((sum, product) => sum + product.views, 0);
+
+    // Get total reviews
+    const totalReviews = await prisma.review.count({
+      where: {
+        product: {
+          vendorId: req.user.id
+        }
+      }
+    });
+
+    // Get average rating
+    const reviewsAggregate = await prisma.review.aggregate({
+      where: {
+        product: {
+          vendorId: req.user.id
+        },
+        isApproved: true
+      },
+      _avg: {
+        rating: true
+      }
+    });
+
+    const averageRating = reviewsAggregate._avg.rating || 0;
+
+    // Calculate conversion rate (orders / views * 100)
+    const conversionRate = totalViews > 0 ? ((totalOrders / totalViews) * 100).toFixed(2) : 0;
+
+    // Calculate satisfaction rate based on average rating
+    const satisfactionRate = averageRating > 0 ? Math.round((averageRating / 5) * 100) : 0;
+
     res.json({
       totalOrders,
       totalRevenue,
@@ -495,6 +533,12 @@ export const getVendorStats = async (req, res) => {
       ordersByStatus,
       productCount,
       activeProductCount,
+      totalProducts: activeProductCount,
+      totalViews,
+      totalReviews,
+      averageRating: Number(averageRating.toFixed(2)),
+      conversionRate: Number(conversionRate),
+      satisfactionRate,
       averageOrderValue: totalOrders > 0 ? totalRevenue / totalOrders : 0
     });
   } catch (error) {
