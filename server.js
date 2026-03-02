@@ -42,6 +42,9 @@ import chatRoutes from './src/routes/chat.routes.js';
 // Import error handler
 import errorHandler from './src/middleware/errorHandler.js';
 
+// Import notification helper
+import { setSocketIO } from './src/utils/notificationHelper.js';
+
 const app = express();
 const httpServer = createServer(app);
 
@@ -114,6 +117,10 @@ io.on('connection', (socket) => {
 // Make io accessible to routes
 app.set('io', io);
 app.set('connectedUsers', connectedUsers);
+
+// Configure Socket.IO in notification helper
+setSocketIO(io);
+console.log('✅ Socket.IO configurado no notificationHelper');
 
 // Middleware
 app.use(helmet());

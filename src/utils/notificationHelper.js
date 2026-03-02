@@ -2,12 +2,22 @@ import prisma from '../config/prisma.js';
 
 /**
  * Helper para criar notificações automaticamente
+ * Agora com suporte a Socket.IO para notificações em tempo real
  */
+
+// Variável global para armazenar a instância do io
+let ioInstance = null;
+
+// Função para definir a instância do Socket.IO
+export const setSocketIO = (io) => {
+  ioInstance = io;
+  console.log('✅ Socket.IO configurado no notificationHelper');
+};
 
 // Criar notificação para um usuário
 export const createNotification = async (userId, type, title, message, link = null) => {
   try {
-    await prisma.notification.create({
+    const notification = await prisma.notification.create({
       data: {
         userId,
         type,
@@ -17,6 +27,24 @@ export const createNotification = async (userId, type, title, message, link = nu
       }
     });
     console.log(`✅ Notificação criada para usuário ${userId}: ${title}`);
+    
+    // Emitir evento Socket.IO em tempo real
+    if (ioInstance) {
+      ioInstance.to(`user:${userId}`).emit('notification:new', {
+        id: notification.id,
+        type: notification.type,
+        title: notification.title,
+        message: notification.message,
+        link: notification.link,
+        isRead: false,
+        createdAt: notification.createdAt
+      });
+      console.log(`🔔 Evento notification:new emitido para user:${userId}`);
+    } else {
+      console.warn('⚠️ Socket.IO não configurado, notificação não enviada em tempo real');
+    }
+    
+    return notification;
   } catch (error) {
     console.error('❌ Erro ao criar notificação:', error);
   }
@@ -218,6 +246,7 @@ export const notifyAbandonedCart = async (userId, itemCount) => {
 };
 
 export default {
+  setSocketIO,
   createNotification,
   notifyNewOrder,
   notifyVendorNewOrder,
