@@ -1133,17 +1133,31 @@ export const getSalesReport = async (req, res) => {
 // @access  Private/Admin
 export const getPendingVendors = async (req, res) => {
   try {
-    const { page = 1, limit = 20 } = req.query;
+    const { page = 1, limit = 20, status = 'pending', isActive } = req.query;
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const take = parseInt(limit);
 
+    // Build where clause based on filters
+    const where = {
+      role: 'VENDOR'
+    };
+
+    // Filter by approval status
+    if (status === 'pending') {
+      where.isApproved = false;
+    } else if (status === 'approved') {
+      where.isApproved = true;
+    }
+    // If status is 'all', don't filter by isApproved
+
+    // Filter by active status
+    if (isActive !== undefined && isActive !== '') {
+      where.isActive = isActive === 'true';
+    }
+
     const vendors = await prisma.user.findMany({
-      where: {
-        role: 'VENDOR',
-        isApproved: false,
-        isActive: true
-      },
+      where,
       skip,
       take,
       orderBy: { createdAt: 'desc' },
@@ -1158,6 +1172,9 @@ export const getPendingVendors = async (req, res) => {
         city: true,
         province: true,
         isEmailVerified: true,
+        isActive: true,
+        isApproved: true,
+        approvedAt: true,
         createdAt: true,
         _count: {
           select: {
@@ -1168,11 +1185,7 @@ export const getPendingVendors = async (req, res) => {
     });
 
     const total = await prisma.user.count({
-      where: {
-        role: 'VENDOR',
-        isApproved: false,
-        isActive: true
-      }
+      where
     });
 
     res.json({
@@ -1186,7 +1199,7 @@ export const getPendingVendors = async (req, res) => {
     });
   } catch (error) {
     console.error('Get pending vendors error:', error);
-    res.status(500).json({ message: 'Erro ao buscar vendedores pendentes' });
+    res.status(500).json({ message: 'Erro ao buscar vendedores' });
   }
 };
 
@@ -1372,5 +1385,78 @@ export const getVendorApprovalStats = async (req, res) => {
   } catch (error) {
     console.error('Get vendor stats error:', error);
     res.status(500).json({ message: 'Erro ao buscar estatísticas' });
+  }
+};
+
+// @desc    Reactivate vendor
+// @route   PATCH /api/admin/vendors/:id/reactivate
+// @access  Private/Admin
+export const reactivateVendor = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Verificar se o vendedor existe
+    const vendor = await prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        isActive: true,
+        isApproved: true
+      }
+    });
+
+    if (!vendor) {
+      return res.status(404).json({ message: 'Vendedor não encontrado' });
+    }
+
+    if (vendor.role !== 'VENDOR') {
+      return res.status(400).json({ message: 'Usuário não é um vendedor' });
+    }
+
+    if (vendor.isActive) {
+      return res.status(400).json({ message: 'Vendedor já está ativo' });
+    }
+
+    // Reativar vendedor
+    const updatedVendor = await prisma.user.update({
+      where: { id },
+      data: {
+        isActive: true
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        storeName: true,
+        isActive: true,
+        isApproved: true
+      }
+    });
+
+    // Criar notificação para o vendedor
+    try {
+      await prisma.notification.create({
+        data: {
+          userId: id,
+          type: 'SYSTEM',
+          title: '✅ Conta Reativada',
+          message: `Olá ${vendor.name}! Sua conta foi reativada. Você pode fazer login novamente.`,
+          link: '/login'
+        }
+      });
+    } catch (notifError) {
+      console.error('❌ Erro ao criar notificação:', notifError);
+    }
+
+    res.json({
+      message: 'Vendedor reativado com sucesso',
+      vendor: updatedVendor
+    });
+  } catch (error) {
+    console.error('Reactivate vendor error:', error);
+    res.status(500).json({ message: 'Erro ao reativar vendedor' });
   }
 };

@@ -50,6 +50,7 @@ import {
   getPendingVendors,
   approveVendor,
   rejectVendor,
+  reactivateVendor,
   getVendorApprovalStats
 } from '../controllers/admin.controller.js';
 
@@ -108,5 +109,6 @@ router.get('/vendors/pending', getPendingVendors);
 router.get('/vendors/stats', getVendorApprovalStats);
 router.patch('/vendors/:id/approve', approveVendor);
 router.patch('/vendors/:id/reject', rejectVendor);
+router.patch('/vendors/:id/reactivate', reactivateVendor);
 
 export default router;
