@@ -16,6 +16,9 @@ const __dirname = path.dirname(__filename);
 // Load environment variables
 dotenv.config();
 
+// Normalize FRONTEND_URL — remove trailing slash to prevent CORS mismatch
+const FRONTEND_URL = (process.env.FRONTEND_URL || 'http://localhost:3000').replace(/\/$/, '');
+
 // Import Prisma client
 import prisma from './src/config/prisma.js';
 
@@ -51,7 +54,7 @@ const httpServer = createServer(app);
 // Socket.IO configuration
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.FRONTEND_URL || 'https://techstore-frondend-production-ef2f.up.railway.app/',
+    origin: FRONTEND_URL,
     credentials: true,
     methods: ['GET', 'POST']
   }
@@ -125,7 +128,7 @@ console.log('✅ Socket.IO configurado no notificationHelper');
 // Middleware
 app.use(helmet());
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'https://techstore-frondend-production-ef2f.up.railway.app/',
+  origin: FRONTEND_URL,
   credentials: true
 }));
 app.use(morgan('dev'));
