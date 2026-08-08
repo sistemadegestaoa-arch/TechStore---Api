@@ -51,7 +51,7 @@ const httpServer = createServer(app);
 // Socket.IO configuration
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: process.env.FRONTEND_URL || 'https://techstore-frondend-production-ef2f.up.railway.app/',
     credentials: true,
     methods: ['GET', 'POST']
   }
@@ -125,7 +125,7 @@ console.log('✅ Socket.IO configurado no notificationHelper');
 // Middleware
 app.use(helmet());
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: process.env.FRONTEND_URL || 'https://techstore-frondend-production-ef2f.up.railway.app/',
   credentials: true
 }));
 app.use(morgan('dev'));
