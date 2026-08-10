@@ -42,7 +42,9 @@ export const createOrder = async (req, res) => {
       }
 
       const itemSubtotal = product.price * item.quantity;
-      const commission = itemSubtotal * (product.vendor.commissionRate / 100);
+      // Comissão: 4% para produtos >= 100.000 kz, 3% para produtos abaixo
+      const commissionRate = Number(product.price) >= 100000 ? 4 : 3;
+      const commission = itemSubtotal * (commissionRate / 100);
       const vendorEarnings = itemSubtotal - commission;
 
       subtotal += itemSubtotal;

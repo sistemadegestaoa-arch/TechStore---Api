@@ -79,7 +79,7 @@ model User {
   storeName        String?
   storeDescription String?  @db.Text
   storeLogo        String?
-  commissionRate   Decimal  @default(8.00) @db.Decimal(5, 2)
+  commissionRate   Decimal  @default(4.00) @db.Decimal(5, 2)
   
   // Address
   address    String?

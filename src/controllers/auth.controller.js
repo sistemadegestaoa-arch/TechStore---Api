@@ -111,7 +111,7 @@ export const registerVendor = async (req, res, next) => {
         city,
         province,
         emailVerificationToken: verificationToken,
-        commissionRate: 8.00
+        commissionRate: 4.00
       }
     });
 

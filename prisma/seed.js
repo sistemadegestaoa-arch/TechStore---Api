@@ -161,7 +161,7 @@ async function main() {
       city: 'Luanda',
       province: 'Luanda',
       country: 'Angola',
-      commissionRate: 8.00
+      commissionRate: 4.00
     }
   });
 
