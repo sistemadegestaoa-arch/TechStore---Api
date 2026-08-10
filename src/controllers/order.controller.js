@@ -1,3 +1,4 @@
+import { calculateCommission } from '../utils/commissionHelper.js';
 import prisma from '../config/prisma.js';
 import { notifyNewOrder, notifyVendorNewOrder, notifyOrderStatusChange } from '../utils/notificationHelper.js';
 
@@ -42,10 +43,10 @@ export const createOrder = async (req, res) => {
       }
 
       const itemSubtotal = product.price * item.quantity;
-      // Comissão: 4% para produtos >= 100.000 kz, 3% para produtos abaixo
-      const commissionRate = Number(product.price) >= 100000 ? 4 : 3;
-      const commission = itemSubtotal * (commissionRate / 100);
-      const vendorEarnings = itemSubtotal - commission;
+      const { commissionRate, commission, vendorEarnings } = calculateCommission(
+        itemSubtotal,
+        product.price
+      );
 
       subtotal += itemSubtotal;
 
