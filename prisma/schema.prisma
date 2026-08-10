@@ -430,13 +430,11 @@ model VendorVerification {
   id                String   @id @default(uuid())
   vendorId          String   @unique
   
-  // Documentos
-  documentType      String   // ID_CARD, PASSPORT, BUSINESS_LICENSE
-  documentNumber    String
-  documentImage     String?
-  
-  // Verificação bancária
-  bankStatement     String?
+  // Documentos obrigatórios
+  alvaraComercial   String?  // PDF do Alvará Comercial (base64)
+  certidaoEmpresa   String?  // PDF da Certidão da Empresa (base64)
+  biProprietario    String?  // PDF do BI do Proprietário (base64)
+  fotoProprietario  String?  // Foto do Proprietário (base64, imagem)
   
   // Status
   status            String   @default("PENDING") // PENDING, APPROVED, REJECTED
